@@ -1,25 +1,33 @@
-from flask import Flask
+from flask import Flask, make_response, jsonify
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
 
 # Required
+app.config["MYSQL_HOST"] = "localhost"
 app.config["MYSQL_USER"] = "root"
 app.config["MYSQL_PASSWORD"] = "admin5678"
-app.config["MYSQL_DB"] = "vehiclereservation_db"
+app.config["MYSQL_DB"] = "vehicle_rental"
 
 # Extra configs, optional:
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
-app.config["MYSQL_CUSTOM_OPTIONS"] = {"ssl": {"ca": "/path/to/ca-file"}}  # https://mysqlclient.readthedocs.io/user_guide.html#functions-and-attributes
 
 mysql = MySQL(app)
 
 @app.route("/")
-def users():
+def helloworld():
+    return "<p>Hello World</p>"
+
+@app.route("/vehicles", methods=["GET"])
+def get_vehicles():
     cur = mysql.connection.cursor()
-    cur.execute("""SELECT user, host FROM mysql.user""")
-    rv = cur.fetchall()
-    return str(rv)
+    query = """
+    SELECT * FROM vehicles
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    cur.close()
+    return make_response(jsonify(data), 200)
 
 if __name__ == "__main__":
     app.run(debug=True)
