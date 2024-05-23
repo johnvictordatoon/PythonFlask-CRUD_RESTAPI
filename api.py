@@ -18,15 +18,27 @@ mysql = MySQL(app)
 def helloworld():
     return "<p>Hello World</p>"
 
-@app.route("/vehicles", methods=["GET"])
-def get_vehicles():
+def fetch_data(query):
     cur = mysql.connection.cursor()
-    query = """
-    SELECT * FROM vehicles
-    """
     cur.execute(query)
     data = cur.fetchall()
     cur.close()
+    return data
+
+@app.route("/vehicles", methods=["GET"])
+def get_vehicles():
+    data = fetch_data("""SELECT * FROM vehicles""")
+    return make_response(jsonify(data), 200)
+
+
+@app.route("/vehicles/<int:id>", methods=["GET"])
+def get_vehicles_by_id(id):
+    data = fetch_data("""SELECT * FROM vehicles WHERE VehicleID = {}""".format(id))
+    return make_response(jsonify(data), 200)
+
+@app.route("/vehicles/daily_rate", methods=["GET"])
+def get_dailyrate_by_vehicles():
+    data = fetch_data("""SELECT ManufacturerVehicle, VehicleType, DailyRate FROM Vehicles""")
     return make_response(jsonify(data), 200)
 
 if __name__ == "__main__":
