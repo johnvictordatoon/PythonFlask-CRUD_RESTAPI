@@ -89,5 +89,36 @@ def add_vehicles():
 
     return make_response(jsonify({"Message": "New Vehicle Added!", "Affected Rows": affected_rows}), 201)
 
+@app.route("/customers/<int:id>", methods=["PUT"])
+def update_customers(id):
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    customername = info["CustomerName"]
+    contactnumber = info["ContactNumber"]
+    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE (CustomerID = %s);""", (customername, contactnumber, id), )
+    mysql.connection.commit()
+
+    print("Affected Row(s): {}".format(cur.rowcount))
+    affected_rows = cur.rowcount
+    cur.close()
+
+    return make_response(jsonify({"Message": "Customer Updated!", "Affected Rows": affected_rows}), 201)
+
+@app.route("/vehicles/<int:id>", methods=["PUT"])
+def update_vehicles(id):
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    manufacturervehicle = info["ManufacturerVehicle"]
+    vehiclemodel = info["VehicleModel"]
+    dailyrate = info["DailyRate"]
+    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE (VehicleID = %s)""", (manufacturervehicle, vehiclemodel, dailyrate, id), )
+    mysql.connection.commit()
+
+    print("Affected Row(s): {}".format(cur.rowcount))
+    affected_rows = cur.rowcount
+    cur.close()
+
+    return make_response(jsonify({"Message": "Vehicle Updated!", "Affected Rows": affected_rows}), 200)
+
 if __name__ == "__main__":
     app.run(debug=True)
