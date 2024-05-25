@@ -1,4 +1,4 @@
-from flask import Flask, make_response, jsonify, request, render_template_string
+from flask import Flask, make_response, jsonify, request, render_template_string, redirect, url_for
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
@@ -23,7 +23,9 @@ def fetch_data(query):
 def welcome():
     return """<h1>Vehicle Rental Database</h1>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
-    <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> customer to rent a vehicle</p>
+    <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> a customer</p>
+    <p><a href="http://127.0.0.1:5000/addvehicle">Add</a> a vehicle</p>
+    <p><a href="http://127.0.0.1:5000/addrental">Add</a> a rental information (related to the customer)</p>
     <p><a href="edit">Edit</a> an entry</p>
     <p><a href="delete">Delete</a> an entry</p>
     <p><a href="search">Search</a> through the database</p>
@@ -88,7 +90,16 @@ def add_customer():
         customername = request.form["CustomerName"]
         contactnumber = request.form["ContactNumber"]
         affected_rows = add_customer_to_db(customername, contactnumber)
-        return make_response(jsonify({"Message": "New Customer Added!", "Affected Rows": affected_rows}), 201)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Customer Added!</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Add Customer</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
     return render_template_string("""
     <h1>Add a Customer</h1>
     <form method="post">
@@ -97,6 +108,7 @@ def add_customer():
         <button type="submit">Add</button>
     </form>
     """)
+
 # add the customer to the db
 def add_customer_to_db(customername, contactnumber):
     cur = mysql.connection.cursor()
@@ -107,29 +119,53 @@ def add_customer_to_db(customername, contactnumber):
     return affected_rows
 
 # add a rental
-@app.route("/rentals", methods=["POST"])
+@app.route("/addrental", methods=["GET", "POST"])
 def add_rental():
+    if request.method == "POST":
+        customerid = request.form["CustomerID"]
+        vehicleid = request.form["VehicleID"]
+        rentalstatus = request.form["RentalStatus"]
+        startdate = request.form["StartDate"]
+        enddate = request.form["EndDate"]
+        affected_rows = add_rental_to_db(customerid, vehicleid, rentalstatus, startdate, enddate)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Rental Added Successfully</h1>
+            <p><a href="/">Go Back to Home</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Add Rental</h1>
+            <p><a href="/">Go Back to Home</a></p>
+            """)
+    return render_template_string("""
+    <h1>Add a Rental</h1>
+    <form method="post">
+        Customer ID: <input type="text" name="CustomerID"><br>
+        Vehicle ID: <input type="text" name="VehicleID"><br>
+        Rental Status: <input type="text" name="RentalStatus"><br>
+        Start Date: <input type="text" name="StartDate"><br>
+        End Date: <input type="text" name="EndDate"><br>
+        <button type="submit">Add</button>
+    </form>
+    """)
+
+# add the rental to the db
+def add_rental_to_db(customerid, vehicleid, rentalstatus, startdate, enddate):
     cur = mysql.connection.cursor()
-    info = request.get_json()
-    customerid = info["CustomerID"]
-    vehicleid = info["VehicleID"]
-    rentalstatus = info["RentalStatus"]
-    startdate = info["StartDate"]
-    enddate = info["EndDate"]
-    
     cur.execute("SELECT * FROM customers WHERE CustomerID = %s", (customerid,))
     if not cur.fetchone():
-        return make_response(jsonify({"Message": "CustomerID does not exist!"}), 400)
+        return 0
     
     cur.execute("SELECT * FROM vehicles WHERE VehicleID = %s", (vehicleid,))
     if not cur.fetchone():
-        return make_response(jsonify({"Message": "VehicleID does not exist!"}), 400)
+        return 0
     
     cur.execute("""INSERT INTO vehicle_rental.rentals (CustomerID, VehicleID, RentalStatus, StartDate, EndDate) VALUES (%s, %s, %s, %s, %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
-    return make_response(jsonify({"Message": "New Rental Added!", "Affected Rows": affected_rows}), 201)
+    return affected_rows
 
 # add a vehicle
 @app.route("/addvehicle", methods=["GET", "POST"])
@@ -139,7 +175,16 @@ def add_vehicle():
         vehiclemodel = request.form["VehicleModel"]
         dailyrate = request.form["DailyRate"]
         affected_rows = add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate)
-        return make_response(jsonify({"Message": "New Vehicle Added!", "Affected Rows": affected_rows}), 201)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Vehicle Added!</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Add Vehicle</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
     return render_template_string("""
     <h1>Add a Vehicle</h1>
     <form method="post">
@@ -196,7 +241,7 @@ def delete_customers(id):
     cur.close()
     return make_response(jsonify({"Message": "Customer Deleted!", "Affected Rows": affected_rows}), 200)
 
-# delete the customer by id
+# delete the vehicle by id
 @app.route("/vehicles/<int:id>", methods=["DELETE"])
 def delete_vehicles(id):
     cur = mysql.connection.cursor()
@@ -206,7 +251,7 @@ def delete_vehicles(id):
     cur.close()
     return make_response(jsonify({"Message": "Vehicle Deleted!", "Affected Rows": affected_rows}), 200)
 
-# delete the customer by id
+# delete the rental by id
 @app.route("/rentals/<int:id>", methods=["DELETE"])
 def delete_rental(id):
     cur = mysql.connection.cursor()
@@ -214,7 +259,7 @@ def delete_rental(id):
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
-    return make_response(jsonify({"Message": "Vehicle Deleted!", "Affected Rows": affected_rows}), 200)
+    return make_response(jsonify({"Message": "Rental Deleted!", "Affected Rows": affected_rows}), 200)
 
 # run the program
 if __name__ == "__main__":
