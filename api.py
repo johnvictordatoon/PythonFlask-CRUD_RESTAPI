@@ -26,7 +26,9 @@ def welcome():
     <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> a customer</p>
     <p><a href="http://127.0.0.1:5000/addvehicle">Add</a> a vehicle</p>
     <p><a href="http://127.0.0.1:5000/addrental">Add</a> a rental information (related to the customer)</p>
-    <p><a href="edit">Edit</a> an entry</p>
+    <p><a href="http://127.0.0.1:5000/updatecustomer">Edit</a> a customer</p>
+    <p><a href="http://127.0.0.1:5000/updatevehicle">Edit</a> a vehicle</p>
+    <p><a href="http://127.0.0.1:5000/updaterental">Edit</a> a rental information (related to the customer)</p>
     <p><a href="delete">Delete</a> an entry</p>
     <p><a href="search">Search</a> through the database</p>
     <p><b><i>OR</i></b></p>
@@ -131,12 +133,12 @@ def add_rental():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Added Successfully</h1>
-            <p><a href="/">Go Back to Home</a></p>
+            <p><a href="/">Go Back</a></p>
             """)
         else:
             return render_template_string("""
             <h1>Failed to Add Rental</h1>
-            <p><a href="/">Go Back to Home</a></p>
+            <p><a href="/">Go Back</a></p>
             """)
     return render_template_string("""
     <h1>Add a Rental</h1>
@@ -204,32 +206,140 @@ def add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate):
     cur.close()
     return affected_rows
 
-# edit the customer by id
-@app.route("/customers/<int:id>", methods=["PUT"])
-def update_customers(id):
-    cur = mysql.connection.cursor()
-    info = request.get_json()
-    customername = info["CustomerName"]
-    contactnumber = info["ContactNumber"]
-    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE (CustomerID = %s);""", (customername, contactnumber, id))
-    mysql.connection.commit()
-    affected_rows = cur.rowcount
-    cur.close()
-    return make_response(jsonify({"Message": "Customer Updated!", "Affected Rows": affected_rows}), 201)
+# edit the customer
+# PUT not working :(
+@app.route("/updatecustomer", methods=["GET", "POST"])
+def update_customer():
+    if request.method == "POST":
+        customerid = request.form["CustomerID"]
+        customername = request.form["CustomerName"]
+        contactnumber = request.form["ContactNumber"]
+        affected_rows = update_customer_in_db(customerid, customername, contactnumber)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Customer Updated Successfully</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Update Customer</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+    return render_template_string("""
+    <h1>Update Customer</h1>
+    <form method="post">
+        <input type="hidden" name="_method" value="PUT">
+        Customer ID: <input type="text" name="CustomerID"><br>
+        Update Name: <input type="text" name="CustomerName"><br>
+        Update Number: <input type="text" name="ContactNumber"><br>
+        <button type="submit">Update</button>
+    </form>
+    """)
 
-# edit the vehicle by id
-@app.route("/vehicles/<int:id>", methods=["PUT"])
-def update_vehicles(id):
+# update the customer in the db
+def update_customer_in_db(id, customername, contactnumber):
     cur = mysql.connection.cursor()
-    info = request.get_json()
-    manufacturervehicle = info["ManufacturerVehicle"]
-    vehiclemodel = info["VehicleModel"]
-    dailyrate = info["DailyRate"]
-    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE (VehicleID = %s)""", (manufacturervehicle, vehiclemodel, dailyrate, id))
+    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE CustomerID = %s;""", (customername, contactnumber, id))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
-    return make_response(jsonify({"Message": "Vehicle Updated!", "Affected Rows": affected_rows}), 200)
+    return affected_rows
+
+# edit the vehicle
+# PUT not working :(
+@app.route("/updatevehicle", methods=["GET", "POST"])
+def update_vehicle():
+    if request.method == "POST":
+        vehicleid = request.form["VehicleID"]
+        manufacturervehicle = request.form["ManufacturerVehicle"]
+        vehiclemodel = request.form["VehicleModel"]
+        dailyrate = request.form["DailyRate"]
+        affected_rows = update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Vehicle Updated Successfully</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Update Vehicle</h1>
+            <p><a href="/">Go Back</a></p>
+            """)
+    return render_template_string("""
+    <h1>Update Vehicle</h1>
+    <form method="post">
+        Vehicle ID: <input type="text" name="VehicleID"><br>
+        Manufacturer: <input type="text" name="ManufacturerVehicle"><br>
+        Model: <input type="text" name="VehicleModel"><br>
+        Daily Rate: <input type="text" name="DailyRate"><br>
+        <button type="submit">Update</button>
+    </form>
+    """)
+
+# update the vehicle in the db
+def update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate):
+    cur = mysql.connection.cursor()
+    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE VehicleID = %s;""", (manufacturervehicle, vehiclemodel, dailyrate, vehicleid))
+    mysql.connection.commit()
+    affected_rows = cur.rowcount
+    cur.close()
+    return affected_rows
+
+# update the rental
+# PUT not working :(
+@app.route("/updaterental", methods=["GET", "POST"])
+def update_rental():
+    if request.method == "POST":
+        rentalid = request.form["RentalID"]
+        customerid = request.form["CustomerID"]
+        vehicleid = request.form["VehicleID"]
+        rentalstatus = request.form["RentalStatus"]
+        startdate = request.form["StartDate"]
+        enddate = request.form["EndDate"]
+        affected_rows = update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate, enddate)
+        if affected_rows > 0:
+            return render_template_string("""
+            <h1>Rental Updated Successfully</h1>
+            <p><a href="/">Go Back to Home</a></p>
+            """)
+        else:
+            return render_template_string("""
+            <h1>Failed to Update Rental</h1>
+            <p><a href="/">Go Back to Home</a></p>
+            """)
+    return render_template_string("""
+    <h1>Update Rental</h1>
+    <form method="post">
+        Rental ID: <input type="text" name="RentalID"><br>
+        Customer ID: <input type="text" name="CustomerID"><br>
+        Vehicle ID: <input type="text" name="VehicleID"><br>
+        Rental Status: <input type="text" name="RentalStatus"><br>
+        Start Date: <input type="text" name="StartDate"><br>
+        End Date: <input type="text" name="EndDate"><br>
+        <button type="submit">Update</button>
+    </form>
+    """)
+
+# update the rental in the db
+def update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate, enddate):
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM rentals WHERE RentalID = %s", (rentalid,))
+    if not cur.fetchone():
+        return 0
+    
+    cur.execute("SELECT * FROM customers WHERE CustomerID = %s", (customerid,))
+    if not cur.fetchone():
+        return 0
+    
+    cur.execute("SELECT * FROM vehicles WHERE VehicleID = %s", (vehicleid,))
+    if not cur.fetchone():
+        return 0
+    
+    cur.execute("""UPDATE vehicle_rental.rentals SET CustomerID = %s, VehicleID = %s, RentalStatus = %s, StartDate = %s, EndDate = %s WHERE RentalID = %s""", (customerid, vehicleid, rentalstatus, startdate, enddate, rentalid))
+    mysql.connection.commit()
+    affected_rows = cur.rowcount
+    cur.close()
+    return affected_rows
 
 # delete the customer by id
 @app.route("/customers/<int:id>", methods=["DELETE"])
