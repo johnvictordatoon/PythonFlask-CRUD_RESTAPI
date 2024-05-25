@@ -1,5 +1,7 @@
-from flask import Flask, make_response, jsonify, request, render_template_string, redirect, url_for
+from flask import Flask, make_response, jsonify, request, render_template_string
 from flask_mysqldb import MySQL
+import jwt
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -9,8 +11,41 @@ app.config["MYSQL_PASSWORD"] = "admin5678"
 app.config["MYSQL_DB"] = "vehicle_rental"
 
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
+app.config['SECRET_KEY'] = 'KEYSECRET'
 
 mysql = MySQL(app)
+
+# JWT Token Required Decorator
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+        except:
+            return jsonify({'message': 'Token is invalid'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+# Example JWT Token Generation
+@app.route('/login', methods=['GET'])
+def login():
+    auth = request.authorization
+    if auth and auth.password == 'password':
+        token = jwt.encode({'user': auth.username}, app.config['SECRET_KEY'], algorithm="HS256")
+        return jsonify({'token': token})
+
+    return make_response('Could not verify!', 401, {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+@app.route('/protected')
+@token_required
+def protected():
+    return jsonify({'message': 'This is a protected endpoint'})
 
 def fetch_data(query):
     cur = mysql.connection.cursor()
@@ -20,6 +55,7 @@ def fetch_data(query):
     return data
 
 @app.route("/")
+@token_required
 def welcome():
     return """<h1>Vehicle Rental Database</h1>
     <p><a href="search">Search</a> through the database</p>
@@ -35,6 +71,7 @@ def welcome():
 
 # get entire database
 @app.route("/database")
+@token_required
 def the_database():
     data = fetch_data("""SELECT customers.CustomerName, customers.ContactNumber, vehicles.ManufacturerVehicle, vehicles.VehicleModel, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
     FROM Customers
@@ -44,6 +81,7 @@ def the_database():
 
 # add a customer
 @app.route("/addcustomer", methods=["GET", "POST"])
+@token_required
 def add_customer():
     if request.method == "POST":
         customername = request.form["CustomerName"]
@@ -79,6 +117,7 @@ def add_customer_to_db(customername, contactnumber):
 
 # add a rental
 @app.route("/addrental", methods=["GET", "POST"])
+@token_required
 def add_rental():
     if request.method == "POST":
         customerid = request.form["CustomerID"]
@@ -128,6 +167,7 @@ def add_rental_to_db(customerid, vehicleid, rentalstatus, startdate, enddate):
 
 # add a vehicle
 @app.route("/addvehicle", methods=["GET", "POST"])
+@token_required
 def add_vehicle():
     if request.method == "POST":
         manufacturervehicle = request.form["ManufacturerVehicle"]
@@ -166,6 +206,7 @@ def add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate):
 # edit the customer
 # PUT not working :(
 @app.route("/updatecustomer", methods=["GET", "POST"])
+@token_required
 def update_customer():
     if request.method == "POST":
         customerid = request.form["CustomerID"]
@@ -205,6 +246,7 @@ def update_customer_in_db(id, customername, contactnumber):
 # edit the vehicle
 # PUT not working :(
 @app.route("/updatevehicle", methods=["GET", "POST"])
+@token_required
 def update_vehicle():
     if request.method == "POST":
         vehicleid = request.form["VehicleID"]
@@ -245,6 +287,7 @@ def update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate
 # update the rental
 # PUT not working :(
 @app.route("/updaterental", methods=["GET", "POST"])
+@token_required
 def update_rental():
     if request.method == "POST":
         rentalid = request.form["RentalID"]
@@ -301,6 +344,7 @@ def update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate
 # delete the customer
 # DELETE not working :(
 @app.route("/deleterental", methods=["GET", "POST"])
+@token_required
 def delete_data():
     if request.method == "POST":
         rentalid = request.form["RentalID"]
@@ -333,127 +377,6 @@ def delete_in_db(rentalid):
     mysql.connection.commit()
     cur.close()
     return rentals_deleted
-
-# get customers
-@app.route("/customers", methods=["GET"])
-def get_customers():
-    data = fetch_data("""SELECT * FROM customers""")
-    return make_response(jsonify(data), 200)
-
-# get customers by id
-@app.route("/customers/<int:id>", methods=["GET"])
-def get_customers_by_id(id):
-    data = fetch_data("""SELECT * FROM customers WHERE CustomerID = {}""".format(id))
-    return make_response(jsonify(data), 200)
-
-# get vehicles
-@app.route("/vehicles", methods=["GET"])
-def get_vehicles():
-    data = fetch_data("""SELECT * FROM vehicles""")
-    return make_response(jsonify(data), 200)
-
-# get vehicles by id
-@app.route("/vehicles/<int:id>", methods=["GET"])
-def get_vehicles_by_id(id):
-    data = fetch_data("""SELECT * FROM vehicles WHERE VehicleID = {}""".format(id))
-    return make_response(jsonify(data), 200)
-
-# get daily rate by vehicles
-@app.route("/vehicles/daily_rate", methods=["GET"])
-def get_dailyrate_by_vehicles():
-    data = fetch_data("""SELECT ManufacturerVehicle, VehicleModel, DailyRate FROM Vehicles""")
-    return make_response(jsonify(data), 200)
-
-# get rentals
-@app.route("/rentals", methods=["GET"])
-def get_rentals():
-    data = fetch_data("""SELECT * FROM rentals""")
-    return make_response(jsonify(data), 200)
-
-# get rentals by id
-@app.route("/rentals/<int:id>", methods=["GET"])
-def get_rentals_by_id(id):
-    data = fetch_data("""SELECT * FROM rentals WHERE RentalID = {}""".format(id))
-    return make_response(jsonify(data), 200)
-
-@app.route("/customers/<int:id>", methods=["PUT"])
-def update_customers(id):
-    cur = mysql.connection.cursor()
-    info = request.get_json()
-    customername = info["CustomerName"]
-    contactnumber = info["ContactNumber"]
-    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE (CustomerID = %s);""", (customername, contactnumber, id), )
-    mysql.connection.commit()
-
-    print("Affected Row(s): {}".format(cur.rowcount))
-    affected_rows = cur.rowcount
-    cur.close()
-
-    return make_response(jsonify({"Message": "Customer Updated!", "Affected Rows": affected_rows}), 201)
-
-@app.route("/vehicles/<int:id>", methods=["PUT"])
-def update_vehicles(id):
-    cur = mysql.connection.cursor()
-    info = request.get_json()
-    manufacturervehicle = info["ManufacturerVehicle"]
-    vehiclemodel = info["VehicleModel"]
-    dailyrate = info["DailyRate"]
-    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE (VehicleID = %s)""", (manufacturervehicle, vehiclemodel, dailyrate, id), )
-    mysql.connection.commit()
-
-    print("Affected Row(s): {}".format(cur.rowcount))
-    affected_rows = cur.rowcount
-    cur.close()
-
-    return make_response(jsonify({"Message": "Vehicle Updated!", "Affected Rows": affected_rows}), 200)
-
-@app.route("/rentals/<int:id>", methods=["PUT"])
-def update_rental(id):
-    cur = mysql.connection.cursor()
-    info = request.get_json()
-    customerid = info["CustomerID"]
-    vehicleid = info["VehicleID"]
-    rentalstatus = info["RentalStatus"]
-    startdate = info["StartDate"]
-    enddate = info["End Date"]
-    cur.execute("""UPDATE vehicle_rental.rentals SET CustomerID = %s, VehicleID = %s, RentalStatus = %s, StartDate = %s, EndDate = %s WHERE (RentalID = %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate, id), )
-    mysql.connection.commit()
-
-    print("Affected Row(s): {}".format(cur.rowcount))
-    affected_rows = cur.rowcount
-    cur.close()
-
-    return make_response(jsonify({"Message": "Rental Updated!", "Affected Rows": affected_rows}), 200)
-
-# delete the vehicle by id
-@app.route("/customers/<int:id>", methods=["DELETE"])
-def delete_customer(id):
-    cur = mysql.connection.cursor()
-    cur.execute("""DELETE FROM vehicle_rental.customers WHERE (CustomerID = %s);""", (id, ))
-    mysql.connection.commit()
-    affected_rows = cur.rowcount
-    cur.close()
-    return make_response(jsonify({"Message": "Customer Deleted!", "Affected Rows": affected_rows}), 200)
-
-# delete the vehicle by id
-@app.route("/vehicles/<int:id>", methods=["DELETE"])
-def delete_vehicle(id):
-    cur = mysql.connection.cursor()
-    cur.execute("""DELETE FROM vehicle_rental.vehicles WHERE (VehicleID = %s);""", (id, ))
-    mysql.connection.commit()
-    affected_rows = cur.rowcount
-    cur.close()
-    return make_response(jsonify({"Message": "Vehicle Deleted!", "Affected Rows": affected_rows}), 200)
-
-# delete the rental by id
-@app.route("/rentals/<int:id>", methods=["DELETE"])
-def delete_rental(id):
-    cur = mysql.connection.cursor()
-    cur.execute("""DELETE FROM vehicle_rental.rentals WHERE (RentalID = %s);""", (id, ))
-    mysql.connection.commit()
-    affected_rows = cur.rowcount
-    cur.close()
-    return make_response(jsonify({"Message": "Rental Deleted!", "Affected Rows": affected_rows}), 200)
 
 # run the program
 if __name__ == "__main__":
