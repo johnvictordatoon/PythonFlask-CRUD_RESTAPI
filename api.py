@@ -66,7 +66,9 @@ def welcome():
     <p><a href="http://127.0.0.1:5000/updatecustomer">Edit</a> a customer</p>
     <p><a href="http://127.0.0.1:5000/updatevehicle">Edit</a> a vehicle</p>
     <p><a href="http://127.0.0.1:5000/updaterental">Edit</a> a rental information (related to the customer)</p>
-    <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental (do this <b>first</b> before deleting others)</p>
+    <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental</p>
+    <p><a href="http://127.0.0.1:5000/deletcustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
+    <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
     """
 
 # get entire database
@@ -345,11 +347,11 @@ def update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate
 # DELETE not working :(
 @app.route("/deleterental", methods=["GET", "POST"])
 @token_required
-def delete_data():
+def delete_rental():
     if request.method == "POST":
         rentalid = request.form["RentalID"]
         if rentalid:
-            rentals_deleted = delete_in_db(rentalid)
+            rentals_deleted = delete_rental_in_db(rentalid)
             if rentals_deleted > 0:
                 return render_template_string("""
                 <b><p>Data Deleted Successfully</p></b>
@@ -370,13 +372,85 @@ def delete_data():
     """)
 
 # delete the data in the db
-def delete_in_db(rentalid):
+def delete_rental_in_db(rentalid):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM vehicle_rental.rentals WHERE RentalID = %s", (rentalid,))
     rentals_deleted = cur.rowcount
     mysql.connection.commit()
     cur.close()
     return rentals_deleted
+
+# delete the customer
+@app.route("/deletecustomer", methods=["GET", "POST"])
+@token_required
+def delete_customer():
+    if request.method == "POST":
+        customerid = request.form["CustomerID"]
+        if customerid:
+            customers_deleted = delete_customer_in_db(customerid)
+            if customers_deleted > 0:
+                return render_template_string("""
+                <b><p>Customer Data Deleted</p></b>
+                <p><a href="/">Main Menu</a></p>
+                """)
+            else:
+                return render_template_string("""
+                <b><p>ID doesn't exist.</p></b>
+                <p><a href="/deletecustomer">Go Back</a></p>
+                """)
+    return render_template_string("""
+    <h1>Delete Customer</h1>
+    <p><b>IMPORTANT</b>: Must delete the <b>Rental</b>data associated by the deleted ID first. Otherwise, error will occur.</p>
+    <form method="post">
+        Find ID (Customer): <input type="text" name="CustomerID"><br>
+        <button type="submit">Delete</button>
+    </form>
+    """)
+
+# delete the customer in the db
+def delete_customer_in_db(customerid):
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM vehicle_rental.customers WHERE CustomerID = %s", (customerid,))
+    customers_deleted = cur.rowcount
+    mysql.connection.commit()
+    cur.close()
+    return customers_deleted
+
+# delete the vehicle
+@app.route("/deletevehicle", methods=["GET", "POST"])
+@token_required
+def delete_vehicle():
+    if request.method == "POST":
+        vehicleid = request.form["VehicleID"]
+        if vehicleid:
+            vehicles_deleted = delete_vehicle_in_db(vehicleid)
+            if vehicles_deleted > 0:
+                return render_template_string("""
+                <b><p>Vehicle Data Deleted!</p></b>
+                <p><a href="/">Main Menu</a></p>
+                """)
+            else:
+                return render_template_string("""
+                <b><p>ID doesn't exist.</p></b>
+                <p><a href="/deletevehicle">Go Back</a></p>
+                """)
+    return render_template_string("""
+    <h1>Delete Vehicle</h1>
+    <p><b>IMPORTANT</b>: Must delete the <b>Rental</b>data associated by the deleted ID first. Otherwise, error will occur.</p>
+    <form method="post">
+        Find ID (Vehicle): <input type="text" name="VehicleID"><br>
+        <button type="submit">Delete</button>
+    </form>
+    """)
+
+# delete the vehicle in the db
+def delete_vehicle_in_db(vehicleid):
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM vehicle_rental.vehicles WHERE VehicleID = %s", (vehicleid,))
+    vehicles_deleted = cur.rowcount
+    mysql.connection.commit()
+    cur.close()
+    return vehicles_deleted
 
 # run the program
 if __name__ == "__main__":
