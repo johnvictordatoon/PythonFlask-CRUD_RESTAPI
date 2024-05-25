@@ -15,7 +15,7 @@ app.config['SECRET_KEY'] = 'KEYSECRET'
 
 mysql = MySQL(app)
 
-# JWT Token Required Decorator
+# jwt token required decorator
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -32,7 +32,7 @@ def token_required(f):
 
     return decorated
 
-# Example JWT Token Generation
+# jwt token generation
 @app.route('/login', methods=['GET'])
 def login():
     auth = request.authorization

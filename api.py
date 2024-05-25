@@ -1,7 +1,5 @@
 from flask import Flask, make_response, jsonify, request, render_template_string
 from flask_mysqldb import MySQL
-import jwt
-from functools import wraps
 
 app = Flask(__name__)
 
@@ -11,53 +9,14 @@ app.config["MYSQL_PASSWORD"] = "admin5678"
 app.config["MYSQL_DB"] = "vehicle_rental"
 
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
-app.config['SECRET_KEY'] = 'KEYSECRET'
 
 mysql = MySQL(app)
 
-# JWT Token Required Decorator
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({'message': 'Token is missing'}), 401
-
-        try:
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-        except:
-            return jsonify({'message': 'Token is invalid'}), 401
-
-        return f(*args, **kwargs)
-
-    return decorated
-
-# Example JWT Token Generation
-@app.route('/login', methods=['GET'])
-def login():
-    auth = request.authorization
-    if auth and auth.password == 'password':
-        token = jwt.encode({'user': auth.username}, app.config['SECRET_KEY'], algorithm="HS256")
-        return jsonify({'token': token})
-
-    return make_response('Could not verify!', 401, {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
-@app.route('/protected')
-@token_required
-def protected():
-    return jsonify({'message': 'This is a protected endpoint'})
-
-def fetch_data(query):
-    cur = mysql.connection.cursor()
-    cur.execute(query)
-    data = cur.fetchall()
-    cur.close()
-    return data
-
-@app.route("/")
-@token_required
+# welcome route
+@app.route("/welcome", methods=["GET"])
 def welcome():
-    return """<h1>Vehicle Rental Database</h1>
+    return render_template_string("""
+    <h1>Vehicle Rental Database</h1>
     <p><a href="search">Search</a> through the database</p>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
     <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> a customer</p>
@@ -69,11 +28,17 @@ def welcome():
     <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental</p>
     <p><a href="http://127.0.0.1:5000/deletcustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
     <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
-    """
+    """)
+
+def fetch_data(query):
+    cur = mysql.connection.cursor()
+    cur.execute(query)
+    data = cur.fetchall()
+    cur.close()
+    return data
 
 # get entire database
 @app.route("/database")
-@token_required
 def the_database():
     data = fetch_data("""SELECT customers.CustomerName, customers.ContactNumber, vehicles.ManufacturerVehicle, vehicles.VehicleModel, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
     FROM Customers
@@ -83,7 +48,6 @@ def the_database():
 
 # add a customer
 @app.route("/addcustomer", methods=["GET", "POST"])
-@token_required
 def add_customer():
     if request.method == "POST":
         customername = request.form["CustomerName"]
@@ -92,7 +56,7 @@ def add_customer():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Customer Added!</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -119,7 +83,6 @@ def add_customer_to_db(customername, contactnumber):
 
 # add a rental
 @app.route("/addrental", methods=["GET", "POST"])
-@token_required
 def add_rental():
     if request.method == "POST":
         customerid = request.form["CustomerID"]
@@ -131,7 +94,7 @@ def add_rental():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Added!</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -169,7 +132,6 @@ def add_rental_to_db(customerid, vehicleid, rentalstatus, startdate, enddate):
 
 # add a vehicle
 @app.route("/addvehicle", methods=["GET", "POST"])
-@token_required
 def add_vehicle():
     if request.method == "POST":
         manufacturervehicle = request.form["ManufacturerVehicle"]
@@ -179,7 +141,7 @@ def add_vehicle():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Vehicle Added!</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -208,7 +170,6 @@ def add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate):
 # edit the customer
 # PUT not working :(
 @app.route("/updatecustomer", methods=["GET", "POST"])
-@token_required
 def update_customer():
     if request.method == "POST":
         customerid = request.form["CustomerID"]
@@ -218,7 +179,7 @@ def update_customer():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Customer Updated!</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -248,7 +209,6 @@ def update_customer_in_db(id, customername, contactnumber):
 # edit the vehicle
 # PUT not working :(
 @app.route("/updatevehicle", methods=["GET", "POST"])
-@token_required
 def update_vehicle():
     if request.method == "POST":
         vehicleid = request.form["VehicleID"]
@@ -259,7 +219,7 @@ def update_vehicle():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Vehicle Updated!</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -289,7 +249,6 @@ def update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate
 # update the rental
 # PUT not working :(
 @app.route("/updaterental", methods=["GET", "POST"])
-@token_required
 def update_rental():
     if request.method == "POST":
         rentalid = request.form["RentalID"]
@@ -302,7 +261,7 @@ def update_rental():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Updated Successfully</h1>
-            <p><a href="/">Main Menu</a></p>
+            <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -346,7 +305,6 @@ def update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate
 # delete the customer
 # DELETE not working :(
 @app.route("/deleterental", methods=["GET", "POST"])
-@token_required
 def delete_rental():
     if request.method == "POST":
         rentalid = request.form["RentalID"]
@@ -355,7 +313,7 @@ def delete_rental():
             if rentals_deleted > 0:
                 return render_template_string("""
                 <b><p>Data Deleted Successfully</p></b>
-                <p><a href="/">Main Menu</a></p>
+                <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
@@ -382,7 +340,6 @@ def delete_rental_in_db(rentalid):
 
 # delete the customer
 @app.route("/deletecustomer", methods=["GET", "POST"])
-@token_required
 def delete_customer():
     if request.method == "POST":
         customerid = request.form["CustomerID"]
@@ -391,7 +348,7 @@ def delete_customer():
             if customers_deleted > 0:
                 return render_template_string("""
                 <b><p>Customer Data Deleted</p></b>
-                <p><a href="/">Main Menu</a></p>
+                <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
@@ -418,7 +375,6 @@ def delete_customer_in_db(customerid):
 
 # delete the vehicle
 @app.route("/deletevehicle", methods=["GET", "POST"])
-@token_required
 def delete_vehicle():
     if request.method == "POST":
         vehicleid = request.form["VehicleID"]
@@ -427,7 +383,7 @@ def delete_vehicle():
             if vehicles_deleted > 0:
                 return render_template_string("""
                 <b><p>Vehicle Data Deleted!</p></b>
-                <p><a href="/">Main Menu</a></p>
+                <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
