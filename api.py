@@ -23,8 +23,7 @@ def fetch_data(query):
 def welcome():
     return """<h1>Vehicle Rental Database</h1>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
-    <p><a href="http://127.0.0.1:5000/add_customer">Add</a> customer</p>
-    <p><a href="http://127.0.0.1:5000/add_vehicle">Add Vehicle</a></p>
+    <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> customer to rent a vehicle</p>
     <p><a href="edit">Edit</a> an entry</p>
     <p><a href="delete">Delete</a> an entry</p>
     <p><a href="search">Search</a> through the database</p>
@@ -34,10 +33,8 @@ def welcome():
 # get entire database
 @app.route("/database")
 def the_database():
-    data = fetch_data("""SELECT customers.CustomerID, customers.CustomerName, customers.ContactNumber,
-    vehicles.VehicleID, vehicles.ManufacturerVehicle, vehicles.VehicleModel, vehicles.DailyRate, 
-    rentals.RentalID, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
-    FROM customers
+    data = fetch_data("""SELECT customers.CustomerName, customers.ContactNumber, vehicles.ManufacturerVehicle, vehicles.VehicleModel, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
+    FROM Customers
     JOIN rentals ON customers.CustomerID = rentals.CustomerID
     JOIN vehicles ON rentals.VehicleID = vehicles.VehicleID""")
     return make_response(jsonify(data), 200)
@@ -46,6 +43,12 @@ def the_database():
 @app.route("/customers", methods=["GET"])
 def get_customers():
     data = fetch_data("""SELECT * FROM customers""")
+    return make_response(jsonify(data), 200)
+
+# get customers by id
+@app.route("/customers/<int:id>", methods=["GET"])
+def get_customers_by_id(id):
+    data = fetch_data("""SELECT * FROM customers WHERE CustomerID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
 # get vehicles
@@ -72,6 +75,12 @@ def get_rentals():
     data = fetch_data("""SELECT * FROM rentals""")
     return make_response(jsonify(data), 200)
 
+# get rentals by id
+@app.route("/rentals/<int:id>", methods=["GET"])
+def get_rentals_by_id(id):
+    data = fetch_data("""SELECT * FROM rentals WHERE RentalID = {}""".format(id))
+    return make_response(jsonify(data), 200)
+
 # add a customer
 @app.route("/addcustomer", methods=["GET", "POST"])
 def add_customer():
@@ -96,6 +105,31 @@ def add_customer_to_db(customername, contactnumber):
     affected_rows = cur.rowcount
     cur.close()
     return affected_rows
+
+# add a rental
+@app.route("/rentals", methods=["POST"])
+def add_rental():
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    customerid = info["CustomerID"]
+    vehicleid = info["VehicleID"]
+    rentalstatus = info["RentalStatus"]
+    startdate = info["StartDate"]
+    enddate = info["EndDate"]
+    
+    cur.execute("SELECT * FROM customers WHERE CustomerID = %s", (customerid,))
+    if not cur.fetchone():
+        return make_response(jsonify({"Message": "CustomerID does not exist!"}), 400)
+    
+    cur.execute("SELECT * FROM vehicles WHERE VehicleID = %s", (vehicleid,))
+    if not cur.fetchone():
+        return make_response(jsonify({"Message": "VehicleID does not exist!"}), 400)
+    
+    cur.execute("""INSERT INTO vehicle_rental.rentals (CustomerID, VehicleID, RentalStatus, StartDate, EndDate) VALUES (%s, %s, %s, %s, %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate))
+    mysql.connection.commit()
+    affected_rows = cur.rowcount
+    cur.close()
+    return make_response(jsonify({"Message": "New Rental Added!", "Affected Rows": affected_rows}), 201)
 
 # add a vehicle
 @app.route("/addvehicle", methods=["GET", "POST"])
@@ -156,8 +190,7 @@ def update_vehicles(id):
 @app.route("/customers/<int:id>", methods=["DELETE"])
 def delete_customers(id):
     cur = mysql.connection.cursor()
-    info = request.get_json()
-    cur.execute("""DELETE FROM vehicle_rental.customers WHERE (CustomerID = %s);""", (id,))
+    cur.execute("""DELETE FROM vehicle_rental.customers WHERE (CustomerID = %s);""", (id, ))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
@@ -167,8 +200,17 @@ def delete_customers(id):
 @app.route("/vehicles/<int:id>", methods=["DELETE"])
 def delete_vehicles(id):
     cur = mysql.connection.cursor()
-    info = request.get_json()
-    cur.execute("""DELETE FROM vehicle_rental.vehicles WHERE (VehicleID = %s);""", (id,))
+    cur.execute("""DELETE FROM vehicle_rental.vehicles WHERE (VehicleID = %s);""", (id, ))
+    mysql.connection.commit()
+    affected_rows = cur.rowcount
+    cur.close()
+    return make_response(jsonify({"Message": "Vehicle Deleted!", "Affected Rows": affected_rows}), 200)
+
+# delete the customer by id
+@app.route("/rentals/<int:id>", methods=["DELETE"])
+def delete_rental(id):
+    cur = mysql.connection.cursor()
+    cur.execute("""DELETE FROM vehicle_rental.rentals WHERE (RentalID = %s);""", (id, ))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
