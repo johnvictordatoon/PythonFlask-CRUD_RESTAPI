@@ -376,9 +376,68 @@ def get_rentals_by_id(id):
     data = fetch_data("""SELECT * FROM rentals WHERE RentalID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
+@app.route("/customers/<int:id>", methods=["PUT"])
+def update_customers(id):
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    customername = info["CustomerName"]
+    contactnumber = info["ContactNumber"]
+    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE (CustomerID = %s);""", (customername, contactnumber, id), )
+    mysql.connection.commit()
+
+    print("Affected Row(s): {}".format(cur.rowcount))
+    affected_rows = cur.rowcount
+    cur.close()
+
+    return make_response(jsonify({"Message": "Customer Updated!", "Affected Rows": affected_rows}), 201)
+
+@app.route("/vehicles/<int:id>", methods=["PUT"])
+def update_vehicles(id):
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    manufacturervehicle = info["ManufacturerVehicle"]
+    vehiclemodel = info["VehicleModel"]
+    dailyrate = info["DailyRate"]
+    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE (VehicleID = %s)""", (manufacturervehicle, vehiclemodel, dailyrate, id), )
+    mysql.connection.commit()
+
+    print("Affected Row(s): {}".format(cur.rowcount))
+    affected_rows = cur.rowcount
+    cur.close()
+
+    return make_response(jsonify({"Message": "Vehicle Updated!", "Affected Rows": affected_rows}), 200)
+
+@app.route("/rentals/<int:id>", methods=["PUT"])
+def update_rental(id):
+    cur = mysql.connection.cursor()
+    info = request.get_json()
+    customerid = info["CustomerID"]
+    vehicleid = info["VehicleID"]
+    rentalstatus = info["RentalStatus"]
+    startdate = info["StartDate"]
+    enddate = info["End Date"]
+    cur.execute("""UPDATE vehicle_rental.rentals SET CustomerID = %s, VehicleID = %s, RentalStatus = %s, StartDate = %s, EndDate = %s WHERE (RentalID = %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate, id), )
+    mysql.connection.commit()
+
+    print("Affected Row(s): {}".format(cur.rowcount))
+    affected_rows = cur.rowcount
+    cur.close()
+
+    return make_response(jsonify({"Message": "Rental Updated!", "Affected Rows": affected_rows}), 200)
+
+# delete the vehicle by id
+@app.route("/customers/<int:id>", methods=["DELETE"])
+def delete_customer(id):
+    cur = mysql.connection.cursor()
+    cur.execute("""DELETE FROM vehicle_rental.customers WHERE (CustomerID = %s);""", (id, ))
+    mysql.connection.commit()
+    affected_rows = cur.rowcount
+    cur.close()
+    return make_response(jsonify({"Message": "Customer Deleted!", "Affected Rows": affected_rows}), 200)
+
 # delete the vehicle by id
 @app.route("/vehicles/<int:id>", methods=["DELETE"])
-def delete_vehicles(id):
+def delete_vehicle(id):
     cur = mysql.connection.cursor()
     cur.execute("""DELETE FROM vehicle_rental.vehicles WHERE (VehicleID = %s);""", (id, ))
     mysql.connection.commit()
