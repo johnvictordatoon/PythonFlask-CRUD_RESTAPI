@@ -9,7 +9,6 @@ app.config["MYSQL_PASSWORD"] = "admin5678"
 app.config["MYSQL_DB"] = "vehicle_rental"
 
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
-app.config['SECRET_KEY'] = 'KEYSECRET'
 
 mysql = MySQL(app)
 
