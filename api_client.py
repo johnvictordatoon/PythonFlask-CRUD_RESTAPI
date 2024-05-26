@@ -21,20 +21,7 @@ def fetch_data(query):
 
 @app.route("/mainmenu")
 def mainmenu():
-    return """
-    <h1>Vehicle Rental Database</h1>
-    <p><a href="http://127.0.0.1:5000/search">Search</a> through the database</p>
-    <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
-    <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> a customer</p>
-    <p><a href="http://127.0.0.1:5000/addvehicle">Add</a> a vehicle</p>
-    <p><a href="http://127.0.0.1:5000/addrental">Add</a> a rental information (related to the customer)</p>
-    <p><a href="http://127.0.0.1:5000/updatecustomer">Edit</a> a customer</p>
-    <p><a href="http://127.0.0.1:5000/updatevehicle">Edit</a> a vehicle</p>
-    <p><a href="http://127.0.0.1:5000/updaterental">Edit</a> a rental information (related to the customer)</p>
-    <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental</p>
-    <p><a href="http://127.0.0.1:5000/deletecustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
-    <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
-    """
+    return "<h1>Vehicle Rental Database</h1>"
 
 # get entire database
 @app.route("/database")
@@ -135,7 +122,7 @@ def add_rental_client():
     vehicleid = info["VehicleID"]
     rentalstatus = info["RentalStatus"]
     startdate = info["StartDate"]
-    enddate = info["End Date"]
+    enddate = info["EndDate"]
     cur.execute("""INSERT INTO vehicle_rental.rentals (CustomerID, VehicleID, RentalStatus, StartDate, EndDate) VALUES (%s, %s, %s, %s, %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate), )
     mysql.connection.commit()
 
@@ -184,7 +171,7 @@ def update_rental_client(id):
     vehicleid = info["VehicleID"]
     rentalstatus = info["RentalStatus"]
     startdate = info["StartDate"]
-    enddate = info["End Date"]
+    enddate = info["EndDate"]
     cur.execute("""UPDATE vehicle_rental.rentals SET CustomerID = %s, VehicleID = %s, RentalStatus = %s, StartDate = %s, EndDate = %s WHERE (RentalID = %s)""", (customerid, vehicleid, rentalstatus, startdate, enddate, id), )
     mysql.connection.commit()
 
