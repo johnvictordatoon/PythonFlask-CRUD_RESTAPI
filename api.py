@@ -169,9 +169,10 @@ def add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate):
     return affected_rows
 
 # edit the customer
-@app.route("/updatecustomer", methods=["GET", "PUT"])
+# PUT not working :(
+@app.route("/updatecustomer", methods=["GET", "POST"])
 def update_customer():
-    if request.method == "PUT":
+    if request.method == "POST":
         customerid = request.form["CustomerID"]
         customername = request.form["CustomerName"]
         contactnumber = request.form["ContactNumber"]
@@ -205,9 +206,10 @@ def update_customer_in_db(customerid, customername, contactnumber):
     return affected_rows
 
 # edit the vehicle
-@app.route("/updatevehicle", methods=["GET", "PUT"])
+# PUT not working :(
+@app.route("/updatevehicle", methods=["GET", "POST"])
 def update_vehicle():
-    if request.method == "PUT":
+    if request.method == "POST":
         vehicleid = request.form["VehicleID"]
         manufacturervehicle = request.form["ManufacturerVehicle"]
         vehiclemodel = request.form["VehicleModel"]
@@ -243,9 +245,10 @@ def update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate
     return affected_rows
 
 # edit the rental
-@app.route("/updaterental", methods=["GET", "PUT"])
+# PUT not working :(
+@app.route("/updaterental", methods=["GET", "POST"])
 def update_rental():
-    if request.method == "PUT":
+    if request.method == "POST":
         rentalid = request.form["RentalID"]
         rentalstatus = request.form["RentalStatus"]
         startdate = request.form["StartDate"]
@@ -281,9 +284,10 @@ def update_rental_in_db(rentalid, rentalstatus, startdate, enddate):
     return affected_rows
 
 # delete rental
-@app.route("/deleterental", methods=["GET", "DELETE"])
+# DELETE not working :(
+@app.route("/deleterental", methods=["GET", "POST"])
 def delete_rental():
-    if request.method == "DELETE":
+    if request.method == "POST":
         rentalid = request.form["RentalID"]
         if rentalid:
             rentals_deleted = delete_rental_in_db(rentalid)
@@ -315,9 +319,10 @@ def delete_rental_in_db(rentalid):
     return rentals_deleted
 
 # delete customer
-@app.route("/deletecustomer", methods=["GET", "DELETE"])
+# DELETE not working :(
+@app.route("/deletecustomer", methods=["GET", "POST"])
 def delete_customer():
-    if request.method == "DELETE":
+    if request.method == "POST":
         customerid = request.form["CustomerID"]
         if customerid:
             customers_deleted = delete_customer_in_db(customerid)
@@ -349,9 +354,10 @@ def delete_customer_in_db(customerid):
     return customers_deleted
 
 # delete vehicle
-@app.route("/deletevehicle", methods=["GET", "DELETE"])
+# DELETE not working :(
+@app.route("/deletevehicle", methods=["GET", "POST"])
 def delete_vehicle():
-    if request.method == "DELETE":
+    if request.method == "POST":
         vehicleid = request.form["VehicleID"]
         if vehicleid:
             vehicles_deleted = delete_vehicle_in_db(vehicleid)
