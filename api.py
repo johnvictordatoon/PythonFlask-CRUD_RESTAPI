@@ -168,10 +168,9 @@ def add_vehicle_to_db(manufacturervehicle, vehiclemodel, dailyrate):
     return affected_rows
 
 # edit the customer
-# PUT not working :(
-@app.route("/updatecustomer", methods=["GET", "POST"])
+@app.route("/updatecustomer", methods=["GET", "PUT"])
 def update_customer():
-    if request.method == "POST":
+    if request.method == "PUT":
         customerid = request.form["CustomerID"]
         customername = request.form["CustomerName"]
         contactnumber = request.form["ContactNumber"]
@@ -184,33 +183,30 @@ def update_customer():
         else:
             return render_template_string("""
             <h1>Failed to Update Customer</h1>
-            <p><a href="/updatecustomer">Main Menu</a></p>
+            <p><a href="/updatecustomer">Go Back</a></p>
             """)
     return render_template_string("""
     <h1>Update Customer</h1>
-    <form method="post">
-        <input type="hidden" name="_method" value="PUT">
+    <form method="post" action="/updatecustomer?_method=PUT">
         Customer ID: <input type="text" name="CustomerID"><br>
-        Update Name: <input type="text" name="CustomerName"><br>
-        Update Number: <input type="text" name="ContactNumber"><br>
+        Customer Name: <input type="text" name="CustomerName"><br>
+        Contact Number: <input type="text" name="ContactNumber"><br>
         <button type="submit">Update</button>
     </form>
     """)
 
-# update the customer in the db
-def update_customer_in_db(id, customername, contactnumber):
+def update_customer_in_db(customerid, customername, contactnumber):
     cur = mysql.connection.cursor()
-    cur.execute("""UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE CustomerID = %s;""", (customername, contactnumber, id))
+    cur.execute("UPDATE vehicle_rental.customers SET CustomerName = %s, ContactNumber = %s WHERE CustomerID = %s", (customername, contactnumber, customerid))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
     return affected_rows
 
 # edit the vehicle
-# PUT not working :(
-@app.route("/updatevehicle", methods=["GET", "POST"])
+@app.route("/updatevehicle", methods=["GET", "PUT"])
 def update_vehicle():
-    if request.method == "POST":
+    if request.method == "PUT":
         vehicleid = request.form["VehicleID"]
         manufacturervehicle = request.form["ManufacturerVehicle"]
         vehiclemodel = request.form["VehicleModel"]
@@ -224,11 +220,11 @@ def update_vehicle():
         else:
             return render_template_string("""
             <h1>Failed to Update Vehicle</h1>
-            <p><a href="/updatevehicle">Main Menu</a></p>
+            <p><a href="/updatevehicle">Go Back</a></p>
             """)
     return render_template_string("""
     <h1>Update Vehicle</h1>
-    <form method="post">
+    <form method="post" action="/updatevehicle?_method=PUT">
         Vehicle ID: <input type="text" name="VehicleID"><br>
         Manufacturer: <input type="text" name="ManufacturerVehicle"><br>
         Model: <input type="text" name="VehicleModel"><br>
@@ -237,27 +233,23 @@ def update_vehicle():
     </form>
     """)
 
-# update the vehicle in the db
 def update_vehicle_in_db(vehicleid, manufacturervehicle, vehiclemodel, dailyrate):
     cur = mysql.connection.cursor()
-    cur.execute("""UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE VehicleID = %s;""", (manufacturervehicle, vehiclemodel, dailyrate, vehicleid))
+    cur.execute("UPDATE vehicle_rental.vehicles SET ManufacturerVehicle = %s, VehicleModel = %s, DailyRate = %s WHERE VehicleID = %s", (manufacturervehicle, vehiclemodel, dailyrate, vehicleid))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
     return affected_rows
 
-# update the rental
-# PUT not working :(
-@app.route("/updaterental", methods=["GET", "POST"])
+# edit the rental
+@app.route("/updaterental", methods=["GET", "PUT"])
 def update_rental():
-    if request.method == "POST":
+    if request.method == "PUT":
         rentalid = request.form["RentalID"]
-        customerid = request.form["CustomerID"]
-        vehicleid = request.form["VehicleID"]
         rentalstatus = request.form["RentalStatus"]
         startdate = request.form["StartDate"]
         enddate = request.form["EndDate"]
-        affected_rows = update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate, enddate)
+        affected_rows = update_rental_in_db(rentalid, rentalstatus, startdate, enddate)
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Updated!</h1>
@@ -270,10 +262,8 @@ def update_rental():
             """)
     return render_template_string("""
     <h1>Update Rental</h1>
-    <form method="post">
+    <form method="post" action="/updaterental?_method=PUT">
         Rental ID: <input type="text" name="RentalID"><br>
-        Customer ID: <input type="text" name="CustomerID"><br>
-        Vehicle ID: <input type="text" name="VehicleID"><br>
         Rental Status: <input type="text" name="RentalStatus"><br>
         Start Date: <input type="text" name="StartDate"><br>
         End Date: <input type="text" name="EndDate"><br>
@@ -281,32 +271,18 @@ def update_rental():
     </form>
     """)
 
-# update the rental in the db
-def update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate, enddate):
+def update_rental_in_db(rentalid, rentalstatus, startdate, enddate):
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM rentals WHERE RentalID = %s", (rentalid,))
-    if not cur.fetchone():
-        return 0
-    
-    cur.execute("SELECT * FROM customers WHERE CustomerID = %s", (customerid,))
-    if not cur.fetchone():
-        return 0
-    
-    cur.execute("SELECT * FROM vehicles WHERE VehicleID = %s", (vehicleid,))
-    if not cur.fetchone():
-        return 0
-    
-    cur.execute("""UPDATE vehicle_rental.rentals SET CustomerID = %s, VehicleID = %s, RentalStatus = %s, StartDate = %s, EndDate = %s WHERE RentalID = %s""", (customerid, vehicleid, rentalstatus, startdate, enddate, rentalid))
+    cur.execute("UPDATE vehicle_rental.rentals SET RentalStatus = %s, StartDate = %s, EndDate = %s WHERE RentalID = %s", (rentalstatus, startdate, enddate, rentalid))
     mysql.connection.commit()
     affected_rows = cur.rowcount
     cur.close()
     return affected_rows
 
-# delete the customer
-# DELETE not working :(
-@app.route("/deleterental", methods=["GET", "POST"])
+# delete rental
+@app.route("/deleterental", methods=["GET", "DELETE"])
 def delete_rental():
-    if request.method == "POST":
+    if request.method == "DELETE":
         rentalid = request.form["RentalID"]
         if rentalid:
             rentals_deleted = delete_rental_in_db(rentalid)
@@ -323,13 +299,12 @@ def delete_rental():
     return render_template_string("""
     <h1>Delete Data</h1>
     <p>Note: All data related to the ID will be deleted.</p>
-    <form method="post">
+    <form method="post" action="/deleterental?_method=DELETE">
         Find ID: <input type="text" name="RentalID"><br>
         <button type="submit">Delete</button>
     </form>
     """)
 
-# delete the data in the db
 def delete_rental_in_db(rentalid):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM vehicle_rental.rentals WHERE RentalID = %s", (rentalid,))
@@ -338,10 +313,10 @@ def delete_rental_in_db(rentalid):
     cur.close()
     return rentals_deleted
 
-# delete the customer
-@app.route("/deletecustomer", methods=["GET", "POST"])
+# delete customer
+@app.route("/deletecustomer", methods=["GET", "DELETE"])
 def delete_customer():
-    if request.method == "POST":
+    if request.method == "DELETE":
         customerid = request.form["CustomerID"]
         if customerid:
             customers_deleted = delete_customer_in_db(customerid)
@@ -358,13 +333,12 @@ def delete_customer():
     return render_template_string("""
     <h1>Delete Customer</h1>
     <p><b>IMPORTANT</b>: Must delete the <b>rental</b> data associated by the deleted ID first. Otherwise, error will occur.</p>
-    <form method="post">
+    <form method="post" action="/deletecustomer?_method=DELETE">
         Find ID (Customer): <input type="text" name="CustomerID"><br>
         <button type="submit">Delete</button>
     </form>
     """)
 
-# delete the customer in the db
 def delete_customer_in_db(customerid):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM vehicle_rental.customers WHERE CustomerID = %s", (customerid,))
@@ -373,10 +347,10 @@ def delete_customer_in_db(customerid):
     cur.close()
     return customers_deleted
 
-# delete the vehicle
-@app.route("/deletevehicle", methods=["GET", "POST"])
+# delete vehicle
+@app.route("/deletevehicle", methods=["GET", "DELETE"])
 def delete_vehicle():
-    if request.method == "POST":
+    if request.method == "DELETE":
         vehicleid = request.form["VehicleID"]
         if vehicleid:
             vehicles_deleted = delete_vehicle_in_db(vehicleid)
@@ -393,13 +367,12 @@ def delete_vehicle():
     return render_template_string("""
     <h1>Delete Vehicle</h1>
     <p><b>IMPORTANT</b>: Must delete the <b>rental</b> data associated by the deleted ID first. Otherwise, error will occur.</p>
-    <form method="post">
+    <form method="post" action="/deletevehicle?_method=DELETE">
         Find ID (Vehicle): <input type="text" name="VehicleID"><br>
         <button type="submit">Delete</button>
     </form>
     """)
 
-# delete the vehicle in the db
 def delete_vehicle_in_db(vehicleid):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM vehicle_rental.vehicles WHERE VehicleID = %s", (vehicleid,))
