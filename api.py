@@ -394,6 +394,24 @@ def search():
     if request.method == "POST":
         search_type = request.form["search_type"]
         search_id = request.form["search_id"]
+        if not search_id:
+            return render_template_string("""
+            <h1>Search</h1>
+            <form method="post">
+                <label for="search_type">Search for:</label>
+                <select name="search_type">
+                    <option value="Customer">Customer</option>
+                    <option value="Vehicle">Vehicle</option>
+                    <option value="Rental">Rental</option>
+                </select>
+                <br>
+                <label for="search_id">ID:</label>
+                <input type="text" name="search_id"><br>
+                <button type="submit">Search</button>
+                <p style="color: red;">Field is empty</p>
+                <p><a href="/mainmenu">Main Menu</a></p>
+            </form>
+            """)
         return redirect(url_for("search_results", search_type=search_type, search_id=search_id))
     
     return render_template_string("""
