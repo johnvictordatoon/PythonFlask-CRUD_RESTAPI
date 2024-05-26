@@ -1,6 +1,6 @@
 import unittest
 import warnings
-from api import app
+from api_client import app
 
 class MyAppTests(unittest.TestCase):
     def setUp(self):
