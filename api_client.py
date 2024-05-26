@@ -87,6 +87,12 @@ def get_rentals_by_id_client(id):
     data = fetch_data("""SELECT * FROM rentals WHERE RentalID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
+# get rental status
+@app.route("/rentals/rental_status", methods=["GET"])
+def get_rentals_by_id_client():
+    data = fetch_data("""SELECT RentalID, RentalStatus FROM rentals""")
+    return make_response(jsonify(data), 200)
+
 # add customers
 @app.route("/customers", methods=["POST"])
 def add_customers_client():
