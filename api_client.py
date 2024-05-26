@@ -89,7 +89,7 @@ def get_rentals_by_id_client(id):
 
 # get rental status
 @app.route("/rentals/rental_status", methods=["GET"])
-def get_rentals_by_id_client():
+def get_rental_status():
     data = fetch_data("""SELECT RentalID, RentalStatus FROM rentals""")
     return make_response(jsonify(data), 200)
 
