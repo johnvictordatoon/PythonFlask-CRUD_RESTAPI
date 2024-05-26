@@ -1,4 +1,4 @@
-from flask import Flask, make_response, jsonify, request, render_template_string
+from flask import Flask, make_response, jsonify, request
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
@@ -21,7 +21,7 @@ def fetch_data(query):
 
 @app.route("/mainmenu")
 def mainmenu():
-    return render_template_string("""
+    return """
     <h1>Vehicle Rental Database</h1>
     <p><a href="http://127.0.0.1:5000/search">Search</a> through the database</p>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
@@ -34,7 +34,7 @@ def mainmenu():
     <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental</p>
     <p><a href="http://127.0.0.1:5000/deletecustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
     <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
-    """)
+    """
 
 # get entire database
 @app.route("/database")
