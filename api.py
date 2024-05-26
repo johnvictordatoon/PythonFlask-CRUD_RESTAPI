@@ -17,7 +17,7 @@ mysql = MySQL(app)
 def welcome():
     return render_template_string("""
     <h1>Vehicle Rental Database</h1>
-    <p><a href="search">Search</a> through the database</p>
+    <p><a href="http://127.0.0.1:5000/search">Search</a> through the database</p>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
     <p><a href="http://127.0.0.1:5000/addcustomer">Add</a> a customer</p>
     <p><a href="http://127.0.0.1:5000/addvehicle">Add</a> a vehicle</p>
@@ -26,7 +26,7 @@ def welcome():
     <p><a href="http://127.0.0.1:5000/updatevehicle">Edit</a> a vehicle</p>
     <p><a href="http://127.0.0.1:5000/updaterental">Edit</a> a rental information (related to the customer)</p>
     <p><a href="http://127.0.0.1:5000/deleterental">Delete</a> rental</p>
-    <p><a href="http://127.0.0.1:5000/deletcustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
+    <p><a href="http://127.0.0.1:5000/deletecustomer">Delete</a> customer (must delete <b>first</b> the rental data)</p>
     <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
     """)
 
@@ -38,7 +38,7 @@ def fetch_data(query):
     return data
 
 # get entire database
-@app.route("/database")
+@app.route("/database", methods=["GET"])
 def the_database():
     data = fetch_data("""SELECT customers.CustomerName, customers.ContactNumber, vehicles.ManufacturerVehicle, vehicles.VehicleModel, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
     FROM Customers
@@ -260,7 +260,7 @@ def update_rental():
         affected_rows = update_rental_in_db(rentalid, customerid, vehicleid, rentalstatus, startdate, enddate)
         if affected_rows > 0:
             return render_template_string("""
-            <h1>Rental Updated Successfully</h1>
+            <h1>Rental Updated!</h1>
             <p><a href="/welcome">Main Menu</a></p>
             """)
         else:
@@ -312,7 +312,7 @@ def delete_rental():
             rentals_deleted = delete_rental_in_db(rentalid)
             if rentals_deleted > 0:
                 return render_template_string("""
-                <b><p>Data Deleted Successfully</p></b>
+                <b><p>Rental Data Deleted.</p></b>
                 <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
@@ -322,9 +322,9 @@ def delete_rental():
                 """)
     return render_template_string("""
     <h1>Delete Data</h1>
-    <p>Note: This is associated with the Rental ID. All data will be deleted</p>
+    <p>Note: All data related to the ID will be deleted.</p>
     <form method="post">
-        Find ID (Rental): <input type="text" name="RentalID"><br>
+        Find ID: <input type="text" name="RentalID"><br>
         <button type="submit">Delete</button>
     </form>
     """)
@@ -347,7 +347,7 @@ def delete_customer():
             customers_deleted = delete_customer_in_db(customerid)
             if customers_deleted > 0:
                 return render_template_string("""
-                <b><p>Customer Data Deleted</p></b>
+                <b><p>Customer Data Deleted.</p></b>
                 <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
@@ -357,7 +357,7 @@ def delete_customer():
                 """)
     return render_template_string("""
     <h1>Delete Customer</h1>
-    <p><b>IMPORTANT</b>: Must delete the <b>Rental</b>data associated by the deleted ID first. Otherwise, error will occur.</p>
+    <p><b>IMPORTANT</b>: Must delete the <b>rental</b> data associated by the deleted ID first. Otherwise, error will occur.</p>
     <form method="post">
         Find ID (Customer): <input type="text" name="CustomerID"><br>
         <button type="submit">Delete</button>
@@ -382,7 +382,7 @@ def delete_vehicle():
             vehicles_deleted = delete_vehicle_in_db(vehicleid)
             if vehicles_deleted > 0:
                 return render_template_string("""
-                <b><p>Vehicle Data Deleted!</p></b>
+                <b><p>Vehicle Data Deleted.</p></b>
                 <p><a href="/welcome">Main Menu</a></p>
                 """)
             else:
@@ -392,7 +392,7 @@ def delete_vehicle():
                 """)
     return render_template_string("""
     <h1>Delete Vehicle</h1>
-    <p><b>IMPORTANT</b>: Must delete the <b>Rental</b>data associated by the deleted ID first. Otherwise, error will occur.</p>
+    <p><b>IMPORTANT</b>: Must delete the <b>rental</b> data associated by the deleted ID first. Otherwise, error will occur.</p>
     <form method="post">
         Find ID (Vehicle): <input type="text" name="VehicleID"><br>
         <button type="submit">Delete</button>
@@ -407,6 +407,40 @@ def delete_vehicle_in_db(vehicleid):
     mysql.connection.commit()
     cur.close()
     return vehicles_deleted
+
+# search using id
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    if request.method == "POST":
+        search_type = request.form["search_type"]
+        search_id = request.form["search_id"]
+        query = ""
+
+        if search_type == "Customer":
+            query = f"SELECT * FROM customers WHERE CustomerID = {search_id}"
+        elif search_type == "Vehicle":
+            query = f"SELECT * FROM vehicles WHERE VehicleID = {search_id}"
+        elif search_type == "Rental":
+            query = f"SELECT * FROM rentals WHERE RentalID = {search_id}"
+        
+        data = fetch_data(query)
+        return make_response(jsonify(data), 200)
+    
+    return render_template_string("""
+    <h1>Search</h1>
+    <form method="post">
+        <label for="search_type">Search for:</label>
+        <select name="search_type">
+            <option value="Customer">Customer</option>
+            <option value="Vehicle">Vehicle</option>
+            <option value="Rental">Rental</option>
+        </select>
+        <br>
+        <label for="search_id">ID:</label>
+        <input type="text" name="search_id"><br>
+        <button type="submit">Search</button>
+    </form>
+    """)
 
 # run the program
 if __name__ == "__main__":
