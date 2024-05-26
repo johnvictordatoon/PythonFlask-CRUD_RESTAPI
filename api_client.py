@@ -1,7 +1,5 @@
 from flask import Flask, make_response, jsonify, request, render_template_string
 from flask_mysqldb import MySQL
-import jwt
-from functools import wraps
 
 app = Flask(__name__)
 
@@ -15,38 +13,6 @@ app.config['SECRET_KEY'] = 'KEYSECRET'
 
 mysql = MySQL(app)
 
-# jwt token required decorator
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({'message': 'Token is missing'}), 401
-
-        try:
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-        except:
-            return jsonify({'message': 'Token is invalid'}), 401
-
-        return f(*args, **kwargs)
-
-    return decorated
-
-# jwt token generation
-@app.route('/login', methods=['GET'])
-def login():
-    auth = request.authorization
-    if auth and auth.password == 'password':
-        token = jwt.encode({'user': auth.username}, app.config['SECRET_KEY'], algorithm="HS256")
-        return jsonify({'token': token})
-
-    return make_response('Could not verify!', 401, {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
-@app.route('/protected')
-@token_required
-def protected():
-    return jsonify({'message': 'This is a protected endpoint'})
-
 def fetch_data(query):
     cur = mysql.connection.cursor()
     cur.execute(query)
@@ -54,9 +20,8 @@ def fetch_data(query):
     cur.close()
     return data
 
-@app.route("/")
-@token_required
-def welcome():
+@app.route("/mainmenu")
+def mainmenu():
     return """<h1>Vehicle Rental Database</h1>
     <p><a href="search">Search</a> through the database</p>
     <p><a href="http://127.0.0.1:5000/database">View</a> entire database</p>
@@ -71,7 +36,6 @@ def welcome():
 
 # get entire database
 @app.route("/database")
-@token_required
 def the_database():
     data = fetch_data("""SELECT customers.CustomerName, customers.ContactNumber, vehicles.ManufacturerVehicle, vehicles.VehicleModel, rentals.RentalStatus, rentals.StartDate, rentals.EndDate
     FROM Customers
@@ -81,35 +45,30 @@ def the_database():
 
 # get customers
 @app.route("/customers", methods=["GET"])
-@token_required
 def get_customers_client():
     data = fetch_data("""SELECT * FROM customers""")
     return make_response(jsonify(data), 200)
 
 # get customers by id
 @app.route("/customers/<int:id>", methods=["GET"])
-@token_required
 def get_customers_by_id_client(id):
     data = fetch_data("""SELECT * FROM customers WHERE CustomerID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
 # get vehicles
 @app.route("/vehicles", methods=["GET"])
-@token_required
 def get_vehicles_client():
     data = fetch_data("""SELECT * FROM vehicles""")
     return make_response(jsonify(data), 200)
 
 # get vehicles by id
 @app.route("/vehicles/<int:id>", methods=["GET"])
-@token_required
 def get_vehicles_by_id_client(id):
     data = fetch_data("""SELECT * FROM vehicles WHERE VehicleID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
 # get daily rate by vehicles
 @app.route("/vehicles/daily_rate", methods=["GET"])
-@token_required
 def get_dailyrate_by_vehicles_client():
     data = fetch_data("""SELECT ManufacturerVehicle, VehicleModel, DailyRate FROM Vehicles""")
     return make_response(jsonify(data), 200)
@@ -122,14 +81,12 @@ def get_rentals_client():
 
 # get rentals by id
 @app.route("/rentals/<int:id>", methods=["GET"])
-@token_required
 def get_rentals_by_id_client(id):
     data = fetch_data("""SELECT * FROM rentals WHERE RentalID = {}""".format(id))
     return make_response(jsonify(data), 200)
 
 # add customers
 @app.route("/customers", methods=["POST"])
-@token_required
 def add_customers_client():
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -146,7 +103,6 @@ def add_customers_client():
 
 # add vehicles
 @app.route("/vehicles", methods=["POST"])
-@token_required
 def add_vehicles_client():
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -164,7 +120,6 @@ def add_vehicles_client():
 
 # add rental
 @app.route("/rentals", methods=["POST"])
-@token_required
 def add_rental_client():
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -182,9 +137,7 @@ def add_rental_client():
 
     return make_response(jsonify({"Message": "Rental Added!", "Affected Rows": affected_rows}), 200)
 
-
 @app.route("/customers/<int:id>", methods=["PUT"])
-@token_required
 def update_customers_client(id):
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -200,7 +153,6 @@ def update_customers_client(id):
     return make_response(jsonify({"Message": "Customer Updated!", "Affected Rows": affected_rows}), 201)
 
 @app.route("/vehicles/<int:id>", methods=["PUT"])
-@token_required
 def update_vehicles_client(id):
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -217,7 +169,6 @@ def update_vehicles_client(id):
     return make_response(jsonify({"Message": "Vehicle Updated!", "Affected Rows": affected_rows}), 200)
 
 @app.route("/rentals/<int:id>", methods=["PUT"])
-@token_required
 def update_rental_client(id):
     cur = mysql.connection.cursor()
     info = request.get_json()
@@ -237,7 +188,6 @@ def update_rental_client(id):
 
 # delete the vehicle by id
 @app.route("/customers/<int:id>", methods=["DELETE"])
-@token_required
 def delete_customer_client(id):
     cur = mysql.connection.cursor()
     cur.execute("""DELETE FROM vehicle_rental.customers WHERE (CustomerID = %s);""", (id, ))
@@ -248,7 +198,6 @@ def delete_customer_client(id):
 
 # delete the vehicle by id
 @app.route("/vehicles/<int:id>", methods=["DELETE"])
-@token_required
 def delete_vehicle_client(id):
     cur = mysql.connection.cursor()
     cur.execute("""DELETE FROM vehicle_rental.vehicles WHERE (VehicleID = %s);""", (id, ))
@@ -259,7 +208,6 @@ def delete_vehicle_client(id):
 
 # delete the rental by id
 @app.route("/rentals/<int:id>", methods=["DELETE"])
-@token_required
 def delete_rental_client(id):
     cur = mysql.connection.cursor()
     cur.execute("""DELETE FROM vehicle_rental.rentals WHERE (RentalID = %s);""", (id, ))

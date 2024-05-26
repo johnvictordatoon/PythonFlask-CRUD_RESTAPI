@@ -14,7 +14,7 @@ mysql = MySQL(app)
 
 # main menu
 @app.route("/mainmenu", methods=["GET"])
-def welcome():
+def mainmenu():
     return render_template_string("""
     <h1>Vehicle Rental Database</h1>
     <p><a href="http://127.0.0.1:5000/search">Search</a> through the database</p>
