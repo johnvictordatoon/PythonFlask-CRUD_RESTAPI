@@ -1,4 +1,4 @@
-from flask import Flask, make_response, jsonify, request, render_template_string
+from flask import Flask, make_response, jsonify, request, render_template_string, redirect, url_for
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
@@ -12,8 +12,8 @@ app.config["MYSQL_CURSORCLASS"] = "DictCursor"
 
 mysql = MySQL(app)
 
-# welcome route
-@app.route("/welcome", methods=["GET"])
+# main menu
+@app.route("/mainmenu", methods=["GET"])
 def welcome():
     return render_template_string("""
     <h1>Vehicle Rental Database</h1>
@@ -30,6 +30,7 @@ def welcome():
     <p><a href="http://127.0.0.1:5000/deletevehicle">Delete</a> vehicle (must delete <b>first</b> the rental data)</p>
     """)
 
+# fetch get queries
 def fetch_data(query):
     cur = mysql.connection.cursor()
     cur.execute(query)
@@ -56,7 +57,7 @@ def add_customer():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Customer Added!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -94,7 +95,7 @@ def add_rental():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Added!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -141,7 +142,7 @@ def add_vehicle():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Vehicle Added!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -178,7 +179,7 @@ def update_customer():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Customer Updated!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -215,7 +216,7 @@ def update_vehicle():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Vehicle Updated!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -253,7 +254,7 @@ def update_rental():
         if affected_rows > 0:
             return render_template_string("""
             <h1>Rental Updated!</h1>
-            <p><a href="/welcome">Main Menu</a></p>
+            <p><a href="/mainmenu">Main Menu</a></p>
             """)
         else:
             return render_template_string("""
@@ -289,7 +290,7 @@ def delete_rental():
             if rentals_deleted > 0:
                 return render_template_string("""
                 <b><p>Rental Data Deleted.</p></b>
-                <p><a href="/welcome">Main Menu</a></p>
+                <p><a href="/mainmenu">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
@@ -323,7 +324,7 @@ def delete_customer():
             if customers_deleted > 0:
                 return render_template_string("""
                 <b><p>Customer Data Deleted.</p></b>
-                <p><a href="/welcome">Main Menu</a></p>
+                <p><a href="/mainmenu">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
@@ -357,7 +358,7 @@ def delete_vehicle():
             if vehicles_deleted > 0:
                 return render_template_string("""
                 <b><p>Vehicle Data Deleted.</p></b>
-                <p><a href="/welcome">Main Menu</a></p>
+                <p><a href="/mainmenu">Main Menu</a></p>
                 """)
             else:
                 return render_template_string("""
@@ -387,17 +388,7 @@ def search():
     if request.method == "POST":
         search_type = request.form["search_type"]
         search_id = request.form["search_id"]
-        query = ""
-
-        if search_type == "Customer":
-            query = f"SELECT * FROM customers WHERE CustomerID = {search_id}"
-        elif search_type == "Vehicle":
-            query = f"SELECT * FROM vehicles WHERE VehicleID = {search_id}"
-        elif search_type == "Rental":
-            query = f"SELECT * FROM rentals WHERE RentalID = {search_id}"
-        
-        data = fetch_data(query)
-        return make_response(jsonify(data), 200)
+        return redirect(url_for("search_results", search_type=search_type, search_id=search_id))
     
     return render_template_string("""
     <h1>Search</h1>
@@ -412,8 +403,23 @@ def search():
         <label for="search_id">ID:</label>
         <input type="text" name="search_id"><br>
         <button type="submit">Search</button>
+        <p><a href="/mainmenu">Main Menu</a></p>
     </form>
     """)
+
+# search results with type of search and id
+@app.route("/search/<search_type>/<search_id>", methods=["GET"])
+def search_results(search_type, search_id):
+    query = ""
+    if search_type == "Customer":
+        query = f"SELECT * FROM customers WHERE CustomerID = {search_id}"
+    elif search_type == "Vehicle":
+        query = f"SELECT * FROM vehicles WHERE VehicleID = {search_id}"
+    elif search_type == "Rental":
+        query = f"SELECT * FROM rentals WHERE RentalID = {search_id}"
+    
+    data = fetch_data(query)
+    return make_response(jsonify(data), 200)
 
 # run the program
 if __name__ == "__main__":
